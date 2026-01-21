@@ -1,3 +1,4 @@
+from django.utils import timezone
 from rest_framework import serializers
 from .models import Author, Book, Member, Loan
 from django.contrib.auth.models import User
@@ -45,3 +46,17 @@ class LoanSerializer(serializers.ModelSerializer):
     class Meta:
         model = Loan
         fields = ['id', 'book', 'book_id', 'member', 'member_id', 'loan_date', 'return_date', 'is_returned']
+
+
+class LoanExtensionSerializer(serializers.Serializer):
+    additional_days = serializers.IntegerField(min_value=1)
+
+    def validate_additional_days(self, value):
+        loan = self.context['loan']
+        if loan.is_returned:
+            raise serializers.ValidationError('Cannot Extend a returned loan')
+        
+        if timezone.now().date() > loan.due_date:
+            raise serializers.ValidationError('Loan already due')
+        
+        return value
